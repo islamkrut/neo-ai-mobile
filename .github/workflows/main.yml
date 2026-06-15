@@ -27,18 +27,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK & Accept Licenses
-        uses: android-actions/setup-android@v3
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-
-      - name: Create Flet Config Directory
-        run: |
-          mkdir -p ~/.config/flet
-          flutter config --no-analytics
 
       - name: Build APK via Flet
         run: |
