@@ -1,0 +1,4 @@
+app:
+  name: "Neo AI"
+  package: "com.islamkrut.neoai"
+  version: "1.0.0"
