@@ -1,4 +1,7 @@
 app:
-  name: "Neo AI"
-  package: "com.islamkrut.neoai"
+  name: "Neo-AI"
+  package: "com.flet.neo_ai_mobile"
   version: "1.0.0"
+
+android:
+  icon: "logo.png"
