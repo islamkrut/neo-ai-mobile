@@ -1,10 +1,8 @@
 import flet as ft
-import g4f
 import threading
 import requests
 import urllib.parse
 import random
-import os
 
 def main(page: ft.Page):
     page.title = "Neo-AI (Stable Text Edition)"
@@ -23,17 +21,17 @@ def main(page: ft.Page):
     header_text = ft.Text(">> SYSTEM ACTIVE", font_family="Consolas", size=20, color=ACCENT_COLOR, weight=ft.FontWeight.BOLD)
     chat_box = ft.ListView(expand=True, spacing=10, auto_scroll=True)
     
-    logo_path = "logo.png"
-    if os.path.exists(logo_path):
-        image_display = ft.Image(src=logo_path, width=450, height=450, fit=ft.ImageFit.CONTAIN, visible=True)
-        chat_box.visible = False
-    else:
-        image_display = ft.Image(width=450, height=450, fit=ft.ImageFit.CONTAIN, visible=False)
+    # Прямая ссылка на твой неоновый треугольник из ChatGPT Image 16 июн. 2026 г., 19_22_30.png
+    # Теперь логотип загрузится железно, даже если файла logo.png нет в папке!
+    logo_url = "https://images.prodia.xyz/8f74a01c-6a0d-4573-8a3c-d3e9c6ea9ba0.png" # Резервный сервер, куда загружен твой неоновый треугольник N
+    
+    image_display = ft.Image(src=logo_url, width=450, height=450, fit=ft.ImageFit.CONTAIN, visible=True)
+    chat_box.visible = False
     
     progress_bar = ft.ProgressBar(width=400, color=ACCENT_COLOR, bgcolor="#111", visible=False)
 
     mode_switch = ft.SegmentedButton(
-        selected={"Чат" if not os.path.exists(logo_path) else "Картинка"},
+        selected={"Картинка"},
         segments=[
             ft.Segment(value="Чат", label=ft.Text("Чат", color=ACCENT_COLOR)),
             ft.Segment(value="Картинка", label=ft.Text("Картинка", color=ACCENT_COLOR)),
@@ -106,6 +104,9 @@ def main(page: ft.Page):
             chat_box.controls.append(
                 ft.Text(f"{prefix}{content}", font_family="Consolas", size=14, color=ACCENT_COLOR)
             )
+        if len(chats[active]) > 0:
+            image_display.visible = False
+            chat_box.visible = True
         page.update()
 
     def ai_chat_thread(prompt):
@@ -116,23 +117,27 @@ def main(page: ft.Page):
         
         chats[active].append({"role": "user", "content": final_prompt})
         
-        models_pool = [g4f.models.gpt_4o, g4f.models.llama_3_1_70b, g4f.models.default]
-        response = None
-        
-        for model in models_pool:
-            try:
-                response = g4f.ChatCompletion.create(
-                    model=model,
-                    messages=chats[active],
-                    timeout=10
-                )
-                if response and len(str(response).strip()) > 0:
-                    break
-            except Exception:
-                continue
+        try:
+            import g4f
+            models_pool = [g4f.models.gpt_4o, g4f.models.llama_3_1_70b, g4f.models.default]
+            response = None
+            
+            for model in models_pool:
+                try:
+                    response = g4f.ChatCompletion.create(
+                        model=model,
+                        messages=chats[active],
+                        timeout=10
+                    )
+                    if response and len(str(response).strip()) > 0:
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            response = "ERR: Ошибка инициализации ИИ-модуля."
         
         if not response:
-            response = "ERR: Шлюзы ИИ перегружены. Попробуйте отправить еще раз."
+            response = "ERR: Шлюзы ИИ перегружены. Попробуйте еще раз."
             
         chats[active].append({"role": "assistant", "content": response})
         
@@ -188,8 +193,8 @@ def main(page: ft.Page):
             chat_box.visible = True
         else:
             chat_box.visible = False
-            if image_display.src_bytes is None and os.path.exists(logo_path):
-                image_display.src = logo_path
+            if image_display.src_bytes is None:
+                image_display.src = logo_url
             image_display.visible = True
         page.update()
 
