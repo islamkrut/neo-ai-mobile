@@ -1,9 +1,10 @@
-import flet as ft
+ import flet as ft
 import g4f
 import threading
 import requests
 import urllib.parse
 import random
+import os
 
 def main(page: ft.Page):
     # Настройки окна / экрана планшета
@@ -18,7 +19,7 @@ def main(page: ft.Page):
 
     # Данные приложения (Память чатов)
     chats = {"Чат 1": []}
-    current_chat = ["Чат 1"] # Используем список, чтобы менять внутри функций
+    current_chat = ["Чат 1"] 
     is_typing = [False]
 
     # --- КОМПОНЕНТЫ ИНТЕРФЕЙСА ---
@@ -29,8 +30,13 @@ def main(page: ft.Page):
     # Поле вывода текста чата
     chat_box = ft.ListView(expand=True, spacing=10, auto_scroll=True)
     
-    # Контейнер для отображения сгенерированных картинок
-    image_display = ft.Image(width=450, height=450, fit=ft.ImageFit.CONTAIN, visible=False)
+    # Контейнер для отображения сгенерированных картинок / Логотипа
+    # Если logo.png загружен, он отобразится по умолчанию
+    logo_path = "logo.png"
+    if os.path.exists(logo_path):
+        image_display = ft.Image(src=logo_path, width=450, height=450, fit=ft.ImageFit.CONTAIN, visible=False)
+    else:
+        image_display = ft.Image(width=450, height=450, fit=ft.ImageFit.CONTAIN, visible=False)
     
     # Индикатор загрузки (Progress Bar)
     progress_bar = ft.ProgressBar(width=400, color=ACCENT_COLOR, bgcolor="#111", visible=False)
@@ -114,7 +120,6 @@ def main(page: ft.Page):
             )
         page.update()
 
-    # Потоковая функция работы с ИИ текстом
     def ai_chat_thread(prompt):
         active = current_chat[0]
         final_prompt = prompt
@@ -143,19 +148,9 @@ def main(page: ft.Page):
             
         chats[active].append({"role": "assistant", "content": response})
         
-        # Эффект печатающегося текста
-        def type_effect():
-            chat_box.controls.append(ft.Text("RESP: ", font_family="Consolas", size=14, color=ACCENT_COLOR))
-            text_control = chat_box.controls[-1]
-            full_resp = response
-            for i in range(1, len(full_resp) + 1):
-                text_control.value = f"RESP: {full_resp[:i]}"
-                page.update()
-            update_ui_state(False)
+        chat_box.controls.append(ft.Text(f"RESP: {response}", font_family="Consolas", size=14, color=ACCENT_COLOR))
+        update_ui_state(False)
 
-        ft.app(target=type_effect)
-
-    # Потоковая функция генерации картинок
     def ai_paint_thread(prompt):
         try:
             style = style_dropdown.value
@@ -167,6 +162,8 @@ def main(page: ft.Page):
             
             res = requests.get(url, timeout=30)
             if res.status_code == 200:
+                # Переключаемsrc на байты новой картинки
+                image_display.src = None
                 image_display.src_bytes = res.content
                 image_display.visible = True
                 chat_box.visible = False
@@ -197,7 +194,6 @@ def main(page: ft.Page):
 
     execute_btn.on_click = start_action
 
-    # Управление режимами вывода экрана
     def handle_mode_change(e):
         current_mode = list(mode_switch.selected)[0]
         if current_mode == "Чат":
@@ -205,6 +201,9 @@ def main(page: ft.Page):
             chat_box.visible = True
         else:
             chat_box.visible = False
+            # Если своей картинки еще нет, показываем наш крутой логотип
+            if image_display.src_bytes is None and os.path.exists(logo_path):
+                image_display.src = logo_path
             image_display.visible = True
         page.update()
 
@@ -243,7 +242,6 @@ def main(page: ft.Page):
         chats[new_name] = []
         select_chat(new_name)
 
-    # Быстрые утилиты буфера
     def clear_entry(e):
         entry.value = ""
         page.update()
@@ -258,8 +256,6 @@ def main(page: ft.Page):
             show_status("ТЕКСТ СКОПИРОВАН")
 
     # --- СБОРКА МАКЕТА СЕТКИ (LAYOUT) ---
-    
-    # Левая панель (Sidebar)
     sidebar = ft.Container(
         content=ft.Column([
             ft.ElevatedButton("+ NEW SESSION", color="black", bgcolor="transparent", 
@@ -273,30 +269,23 @@ def main(page: ft.Page):
         padding=15
     )
 
-    # Правая рабочая зона (Main Area)
     main_area = ft.Container(
         content=ft.Column([
-            # Хедер строка
             ft.Row([header_text, ft.IconButton(icon=ft.icons.COPY, icon_color=ACCENT_COLOR, on_click=copy_all_text, tooltip="Скопировать всё")], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            # Настройки
             ft.Row([mode_switch, style_dropdown, code_mode_switch], spacing=15),
-            # Контент зоны вывода
-            ft.Container(content=ft.VerticalDivider(width=0), expand=True), # Распорка
+            ft.Container(content=ft.VerticalDivider(width=0), expand=True), 
             chat_box,
-            image_display,
+            ft.Center(image_display),
             progress_bar,
-            # Быстрые кнопки над строкой
             ft.Row([
                 ft.TextButton("🗑️ Очистить строку", style=ft.ButtonStyle(color=ACCENT_COLOR), on_click=clear_entry)
             ]),
-            # Строка ввода в самом низу
             ft.Row([entry, execute_btn], spacing=10)
         ], expand=True),
         expand=True,
         padding=20
     )
 
-    # Запуск экрана
     page.add(ft.Row([sidebar, main_area], expand=True))
     render_sidebar()
 
