@@ -1,4 +1,4 @@
- import flet as ft
+import flet as ft
 import g4f
 import threading
 import requests
@@ -7,43 +7,33 @@ import random
 import os
 
 def main(page: ft.Page):
-    # Настройки окна / экрана планшета
     page.title = "Neo-AI (Stable Text Edition)"
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = "#080808"
     page.padding = 0
 
-    # Константы стиля
     ACCENT_COLOR = "#00FF00"
     BG_SIDEBAR = "#0a0a0a"
 
-    # Данные приложения (Память чатов)
     chats = {"Чат 1": []}
     current_chat = ["Чат 1"] 
     is_typing = [False]
 
     # --- КОМПОНЕНТЫ ИНТЕРФЕЙСА ---
-    
-    # Хедер (Верхняя панель)
     header_text = ft.Text(">> SYSTEM ACTIVE", font_family="Consolas", size=20, color=ACCENT_COLOR, weight=ft.FontWeight.BOLD)
-    
-    # Поле вывода текста чата
     chat_box = ft.ListView(expand=True, spacing=10, auto_scroll=True)
     
-    # Контейнер для отображения сгенерированных картинок / Логотипа
-    # Если logo.png загружен, он отобразится по умолчанию
     logo_path = "logo.png"
     if os.path.exists(logo_path):
-        image_display = ft.Image(src=logo_path, width=450, height=450, fit=ft.ImageFit.CONTAIN, visible=False)
+        image_display = ft.Image(src=logo_path, width=450, height=450, fit=ft.ImageFit.CONTAIN, visible=True)
+        chat_box.visible = False
     else:
         image_display = ft.Image(width=450, height=450, fit=ft.ImageFit.CONTAIN, visible=False)
     
-    # Индикатор загрузки (Progress Bar)
     progress_bar = ft.ProgressBar(width=400, color=ACCENT_COLOR, bgcolor="#111", visible=False)
 
-    # Элементы управления режимами
     mode_switch = ft.SegmentedButton(
-        selected={"Чат"},
+        selected={"Чат" if not os.path.exists(logo_path) else "Картинка"},
         segments=[
             ft.Segment(value="Чат", label=ft.Text("Чат", color=ACCENT_COLOR)),
             ft.Segment(value="Картинка", label=ft.Text("Картинка", color=ACCENT_COLOR)),
@@ -66,7 +56,6 @@ def main(page: ft.Page):
     
     code_mode_switch = ft.Switch(label="РЕЖИМ КОДА", label_style=ft.TextStyle(font_family="Consolas", size=12, color=ACCENT_COLOR))
 
-    # Поле ввода и кнопка отправки
     entry = ft.TextField(
         hint_text="Напишите ваш вопрос для Neo-AI здесь...",
         expand=True,
@@ -86,7 +75,6 @@ def main(page: ft.Page):
     )
 
     # --- ЛОГИКА ФУНКЦИЙ ---
-
     def show_status(msg):
         old_text = header_text.value
         header_text.value = f">> {msg} <<"
@@ -162,7 +150,6 @@ def main(page: ft.Page):
             
             res = requests.get(url, timeout=30)
             if res.status_code == 200:
-                # Переключаемsrc на байты новой картинки
                 image_display.src = None
                 image_display.src_bytes = res.content
                 image_display.visible = True
@@ -201,7 +188,6 @@ def main(page: ft.Page):
             chat_box.visible = True
         else:
             chat_box.visible = False
-            # Если своей картинки еще нет, показываем наш крутой логотип
             if image_display.src_bytes is None and os.path.exists(logo_path):
                 image_display.src = logo_path
             image_display.visible = True
@@ -209,7 +195,6 @@ def main(page: ft.Page):
 
     mode_switch.on_change = handle_mode_change
 
-    # Управление сессиями (Боковое меню)
     sidebar_chats_container = ft.Column(spacing=5)
 
     def select_chat(chat_name):
@@ -255,7 +240,7 @@ def main(page: ft.Page):
             page.set_clipboard(text_to_copy)
             show_status("ТЕКСТ СКОПИРОВАН")
 
-    # --- СБОРКА МАКЕТА СЕТКИ (LAYOUT) ---
+    # --- LAYOUT ---
     sidebar = ft.Container(
         content=ft.Column([
             ft.ElevatedButton("+ NEW SESSION", color="black", bgcolor="transparent", 
